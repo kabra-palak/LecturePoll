@@ -38,6 +38,12 @@ const TeacherView: React.FC<TeacherViewProps> = ({
   onAddQuestion
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyItems, setHistoryItems] = useState<
+    { id: string; question: string; options: { label: string; votes: number }[] }[]
+  >([]);
 
   return (
     <main style={{ position: 'relative', minHeight: 'calc(100vh - 60px)' }}>
@@ -76,8 +82,35 @@ const TeacherView: React.FC<TeacherViewProps> = ({
               cursor: 'pointer',
               boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
             }}
-            onClick={() => {
-              // Placeholder for future poll history behavior
+            onClick={async () => {
+              try {
+                setIsHistoryOpen(true);
+                setIsHistoryLoading(true);
+                setHistoryError(null);
+                const res = await fetch('http://localhost:4000/api/polls/history');
+                if (!res.ok) {
+                  throw new Error('Failed to load history');
+                }
+                const data: {
+                  id: string;
+                  question: string;
+                  options: { id: string; label: string; votes: number }[];
+                }[] = await res.json();
+                setHistoryItems(
+                  data.map((poll) => ({
+                    id: poll.id,
+                    question: poll.question,
+                    options: poll.options.map((opt) => ({
+                      label: opt.label,
+                      votes: opt.votes
+                    }))
+                  }))
+                );
+              } catch (err: any) {
+                setHistoryError(err?.message ?? 'Something went wrong');
+              } finally {
+                setIsHistoryLoading(false);
+              }
             }}
           >
             <span
@@ -393,6 +426,97 @@ const TeacherView: React.FC<TeacherViewProps> = ({
               <div>Ananya Singh</div>
               <div>Vikram Joshi</div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Poll history overlay */}
+      {isHistoryOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 60
+          }}
+          onClick={() => setIsHistoryOpen(false)}
+        >
+          <div
+            className="card"
+            style={{
+              width: 'min(720px, 100% - 40px)',
+              maxHeight: '70vh',
+              overflowY: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="card-title"
+              style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}
+            >
+              <span>Poll History</span>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setIsHistoryOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            {isHistoryLoading && (
+              <p className="page-subtitle">Loading previous polls...</p>
+            )}
+            {!isHistoryLoading && historyError && (
+              <p className="page-subtitle" style={{ color: 'crimson' }}>
+                {historyError}
+              </p>
+            )}
+            {!isHistoryLoading && !historyError && historyItems.length === 0 && (
+              <p className="page-subtitle">No past polls yet.</p>
+            )}
+            {!isHistoryLoading &&
+              !historyError &&
+              historyItems.map((poll, index) => {
+                const total =
+                  poll.options.reduce((sum, opt) => sum + opt.votes, 0) || 1;
+                return (
+                  <div key={poll.id} className="card" style={{ marginBottom: 16 }}>
+                    <div className="card-title">Q{index + 1}</div>
+                    <div className="poll-question">{poll.question}</div>
+                    {poll.options.map((opt, optIndex) => {
+                      const pct = Math.round((opt.votes / total) * 100);
+                      const dotClass =
+                        optIndex === 0
+                          ? 'option-dot a'
+                          : optIndex === 1
+                          ? 'option-dot b'
+                          : optIndex === 2
+                          ? 'option-dot c'
+                          : 'option-dot d';
+                      return (
+                        <div key={opt.label} className="result-item">
+                          <div className="result-header">
+                            <div className="result-label">
+                              <span className={dotClass} />
+                              {opt.label}
+                            </div>
+                            <div className="result-pct">{pct}%</div>
+                          </div>
+                          <div className="progress-bar">
+                            <div
+                              className="progress-fill"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}

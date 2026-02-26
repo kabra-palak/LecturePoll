@@ -94,94 +94,106 @@ const StudentView: React.FC<StudentViewProps> = ({
             {renderTimer()}
           </div>
 
-          {activePoll && activePoll.isActive && remainingSeconds > 0 ? (
-            <>
-              <div className="poll-question">{activePoll.question}</div>
-              <div className="participant-list">
-                {activePoll.options.map((opt) => (
+          {activePoll ? (
+            activePoll.isActive && remainingSeconds > 0 ? (
+              hasSubmitted ? (
+                <>
+                  <div className="page-subtitle">
+                    Waiting for teacher to end this question and show results...
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="poll-question">{activePoll.question}</div>
+                  <div className="participant-list">
+                    {activePoll.options.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className="participant-item"
+                        style={{
+                          cursor: canVote ? 'pointer' : 'default',
+                          border:
+                            selectedOptionId === opt.id
+                              ? '2px solid var(--primary)'
+                              : 'none',
+                          background:
+                            selectedOptionId === opt.id
+                              ? 'var(--primary-bg)'
+                              : 'var(--light-gray)'
+                        }}
+                        onClick={() => {
+                          if (!canVote) return;
+                          setSelectedOptionId(opt.id);
+                        }}
+                      >
+                        <span className="participant-name">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
                   <button
-                    key={opt.id}
+                    className="btn btn-primary"
                     type="button"
-                    className="participant-item"
-                    style={{
-                      cursor: canVote ? 'pointer' : 'default',
-                      border:
-                        selectedOptionId === opt.id ? '2px solid var(--primary)' : 'none',
-                      background:
-                        selectedOptionId === opt.id
-                          ? 'var(--primary-bg)'
-                          : 'var(--light-gray)'
-                    }}
-                    onClick={() => {
-                      if (!canVote) return;
-                      setSelectedOptionId(opt.id);
-                    }}
+                    style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}
+                    disabled={!canVote || !selectedOptionId}
+                    onClick={handleSubmit}
                   >
-                    <span className="participant-name">{opt.label}</span>
+                    Submit Answer
                   </button>
-                ))}
-              </div>
-              <button
-                className="btn btn-primary"
-                type="button"
-                style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}
-                disabled={!canVote || !selectedOptionId}
-                onClick={handleSubmit}
-              >
-                Submit Answer
-              </button>
-            </>
+                </>
+              )
+            ) : (
+              <>
+                <div className="page-subtitle">
+                  Time is up! Here are the results:
+                </div>
+                <div className="poll-question">{activePoll.question}</div>
+                {activePoll.options.map((opt, index) => {
+                  const pct = totalVotes
+                    ? Math.round((opt.votes / totalVotes) * 100)
+                    : 0;
+                  const dotClass =
+                    index === 0
+                      ? 'option-dot a'
+                      : index === 1
+                      ? 'option-dot b'
+                      : index === 2
+                      ? 'option-dot c'
+                      : 'option-dot d';
+                  return (
+                    <div key={opt.id} className="result-item">
+                      <div className="result-header">
+                        <div className="result-label">
+                          <span className={dotClass} />
+                          {opt.label}
+                          {opt.isCorrect && (
+                            <span
+                              style={{
+                                marginLeft: 8,
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                color: 'var(--success)'
+                              }}
+                            >
+                              Correct
+                            </span>
+                          )}
+                        </div>
+                        <div className="result-pct">{pct}%</div>
+                      </div>
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )
           ) : (
             <>
               <div className="page-subtitle">
-                {activePoll
-                  ? 'Time is up! Here are the results:'
-                  : 'Waiting for the teacher to start a poll.'}
+                Waiting for the teacher to start a poll.
               </div>
-              {activePoll ? (
-                <>
-                  <div className="poll-question">{activePoll.question}</div>
-                  {activePoll.options.map((opt, index) => {
-                    const pct = totalVotes
-                      ? Math.round((opt.votes / totalVotes) * 100)
-                      : 0;
-                    const dotClass =
-                      index === 0
-                        ? 'option-dot a'
-                        : index === 1
-                        ? 'option-dot b'
-                        : index === 2
-                        ? 'option-dot c'
-                        : 'option-dot d';
-                    return (
-                      <div key={opt.id} className="result-item">
-                        <div className="result-header">
-                          <div className="result-label">
-                            <span className={dotClass} />
-                            {opt.label}
-                            {opt.isCorrect && (
-                              <span
-                                style={{
-                                  marginLeft: 8,
-                                  fontSize: '0.7rem',
-                                  fontWeight: 600,
-                                  color: 'var(--success)'
-                                }}
-                              >
-                                Correct
-                              </span>
-                            )}
-                          </div>
-                          <div className="result-pct">{pct}%</div>
-                        </div>
-                        <div className="progress-bar">
-                          <div className="progress-fill" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              ) : null}
             </>
           )}
         </div>

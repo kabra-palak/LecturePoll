@@ -1,20 +1,45 @@
 import express from 'express';
 import cors from 'cors';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import { env } from './config/env.js';
+import { connectDatabase } from './config/database.js';
+import { pollRouter } from './routes/pollRoutes.js';
+import { registerPollSocketHandlers } from './sockets/pollSocketHandler.js';
 
-const app = express();
-const port = process.env.PORT || 4000;
+async function main() {
+  await connectDatabase();
 
-app.use(cors());
-app.use(express.json());
+  const app = express();
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'lecturepoll-backend' });
-});
+  app.use(
+    cors({
+      origin: env.corsOrigin,
+      credentials: true
+    })
+  );
+  app.use(express.json());
 
-// TODO: Implement real-time polling endpoints and WebSocket/SSE here.
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', service: 'lecturepoll-backend' });
+  });
 
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Backend listening on http://localhost:${port}`);
-});
+  app.use('/api/polls', pollRouter);
+
+  const server = http.createServer(app);
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: env.corsOrigin
+    }
+  });
+
+  registerPollSocketHandlers(io);
+
+  server.listen(env.port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`Backend listening on http://localhost:${env.port}`);
+  });
+}
+
+void main();
 

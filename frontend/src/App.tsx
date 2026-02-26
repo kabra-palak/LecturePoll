@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { io, type Socket } from 'socket.io-client';
 import {
   Persona,
   Poll,
   PollOption,
   TeacherStats,
   TeacherTab,
-  DEFAULT_OPTIONS,
-  createInitialPoll,
   useRemainingTime
 } from './pollTypes';
 import HomePage from './HomePage';
@@ -18,7 +17,7 @@ const App: React.FC = () => {
   const [pendingPersona, setPendingPersona] = useState<Persona | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [teacherTab, setTeacherTab] = useState<TeacherTab>('create');
-  const [activePoll, setActivePoll] = useState<Poll | null>(() => createInitialPoll());
+  const [activePoll, setActivePoll] = useState<Poll | null>(null);
   const [pollHistory, setPollHistory] = useState<Poll[]>([]);
   const [stats, setStats] = useState<TeacherStats>({
     participantsOnline: 24,
@@ -26,9 +25,24 @@ const App: React.FC = () => {
     pollsCreated: 3
   });
 
-  const [questionText, setQuestionText] = useState(activePoll?.question ?? '');
-  const [options, setOptions] = useState<PollOption[]>(() => activePoll?.options ?? DEFAULT_OPTIONS);
+  const [questionText, setQuestionText] = useState('');
+  const [options, setOptions] = useState<PollOption[]>([
+    { id: 'a', label: '', votes: 0 },
+    { id: 'b', label: '', votes: 0 }
+  ]);
   const [durationSeconds, setDurationSeconds] = useState<number>(60);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [participantId] = useState<string>(() => {
+    if (typeof window === 'undefined') return `p-${Date.now()}`;
+    const key = 'lecturepoll_participant_id';
+    const existing = window.sessionStorage.getItem(key);
+    if (existing) return existing;
+    const generated =
+      (window.crypto?.randomUUID?.() as string | undefined) ??
+      `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    window.sessionStorage.setItem(key, generated);
+    return generated;
+  });
 
   const remainingSeconds = useRemainingTime(activePoll);
 
@@ -44,6 +58,43 @@ const App: React.FC = () => {
       window.sessionStorage.setItem('lecturepoll_student_name', studentName);
     }
   }, [studentName]);
+
+  useEffect(() => {
+    const s = io('http://localhost:4000/polls', {
+      transports: ['websocket']
+    });
+    setSocket(s);
+
+    s.on('poll:state', (serverPoll: any) => {
+      if (!serverPoll) {
+        setActivePoll(null);
+        return;
+      }
+
+      const mapped: Poll = {
+        id: serverPoll.id,
+        question: serverPoll.question,
+        options: serverPoll.options.map((opt: any) => ({
+          id: opt.id,
+          label: opt.label,
+          isCorrect: opt.isCorrect,
+          votes: opt.votes
+        })),
+        durationSeconds: serverPoll.durationSeconds,
+        askedAt: new Date(serverPoll.askedAt).getTime(),
+        isActive: serverPoll.status === 'active'
+      };
+
+      setActivePoll(mapped);
+      setQuestionText(serverPoll.question);
+      setOptions(mapped.options);
+      setDurationSeconds(serverPoll.durationSeconds);
+    });
+
+    return () => {
+      s.disconnect();
+    };
+  }, []);
 
   const totalVotes = useMemo(
     () => (activePoll ? activePoll.options.reduce((sum, opt) => sum + opt.votes, 0) : 0),
@@ -81,28 +132,32 @@ const App: React.FC = () => {
   };
 
   const handleAskQuestion = () => {
-    if (!questionText.trim() || options.length < 2) return;
+    if (!questionText.trim() || options.length < 2 || !socket) return;
 
-    const newPoll: Poll = {
-      id: `poll-${Date.now()}`,
-      question: questionText.trim(),
-      options: options.map((opt) => ({ ...opt, votes: 0 })),
-      durationSeconds,
-      askedAt: Date.now(),
-      isActive: true
-    };
-
-    if (activePoll) {
-      setPollHistory((prev) => [...prev, { ...activePoll, isActive: false }]);
-    }
-
-    setActivePoll(newPoll);
-    setTeacherTab('live');
-    setStats((prev) => ({
-      ...prev,
-      pollsCreated: prev.pollsCreated + 1,
-      responses: 0
-    }));
+    socket.emit(
+      'teacher:createPoll',
+      {
+        question: questionText.trim(),
+        options: options.map((opt) => ({
+          label: opt.label,
+          isCorrect: !!opt.isCorrect
+        })),
+        durationSeconds
+      },
+      (err?: string) => {
+        if (err) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to create poll', err);
+        } else {
+          setTeacherTab('live');
+          setStats((prev) => ({
+            ...prev,
+            pollsCreated: prev.pollsCreated + 1,
+            responses: 0
+          }));
+        }
+      }
+    );
   };
 
   const canAskNewQuestion = useMemo(() => {
@@ -222,12 +277,24 @@ const App: React.FC = () => {
           remainingSeconds={remainingSeconds}
           totalVotes={totalVotes}
           onSubmitVote={(optionId) => {
-            if (!activePoll) return;
-            const updatedOptions = activePoll.options.map((opt) =>
-              opt.id === optionId ? { ...opt, votes: opt.votes + 1 } : opt
+            if (!activePoll || !socket) return;
+            socket.emit(
+              'student:vote',
+              {
+                pollId: activePoll.id,
+                optionId,
+                participantId,
+                participantName: studentName ?? undefined
+              },
+              (err?: string) => {
+                if (err) {
+                  // eslint-disable-next-line no-console
+                  console.error('Failed to submit vote', err);
+                } else {
+                  setStats((prev) => ({ ...prev, responses: prev.responses + 1 }));
+                }
+              }
             );
-            setActivePoll({ ...activePoll, options: updatedOptions });
-            setStats((prev) => ({ ...prev, responses: prev.responses + 1 }));
           }}
         />
       )}
