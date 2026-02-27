@@ -33,6 +33,8 @@ type TeacherViewProps = {
 };
 
 const TeacherView: React.FC<TeacherViewProps> = ({
+  teacherTab,
+  setTeacherTab,
   activePoll,
   totalVotes,
   questionText,
@@ -62,25 +64,27 @@ const TeacherView: React.FC<TeacherViewProps> = ({
 
   return (
     <main style={{ position: 'relative', minHeight: 'calc(100vh - 60px)' }}>
-      <div style={{ maxWidth: 960, margin: '32px auto 0', padding: '0 16px' }}>
+      <div style={{ maxWidth: 960, margin: '32px auto 0', padding: '0 40px 100px' }}>
+        {/* ── Header ── */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
             gap: 16,
-            marginBottom: 16
+            marginBottom: 28
           }}
         >
           <div>
+            {/* Purple pill badge */}
+            <div className="teacher-header-badge">✦ Intervue Poll</div>
+
             <h1 className="page-title" style={{ marginBottom: 6 }}>
-              Let&apos;s Get Started
+              {teacherTab === 'create' ? "Let's Get Started" : ''}
             </h1>
-            <p className="page-subtitle" style={{ maxWidth: 640 }}>
-              you&apos;ll have the ability to create and manage polls, ask questions and
-              monitor your students reponses in real-time.
-            </p>
           </div>
+
+          {/* View Poll History button */}
           <button
             type="button"
             title="View poll history"
@@ -95,7 +99,9 @@ const TeacherView: React.FC<TeacherViewProps> = ({
               fontSize: '0.8rem',
               color: 'var(--gray)',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              flexShrink: 0,
+              marginTop: 4
             }}
             onClick={async () => {
               try {
@@ -103,9 +109,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                 setIsHistoryLoading(true);
                 setHistoryError(null);
                 const res = await fetch('http://localhost:4000/api/polls/history');
-                if (!res.ok) {
-                  throw new Error('Failed to load history');
-                }
+                if (!res.ok) throw new Error('Failed to load history');
                 const data: {
                   id: string;
                   question: string;
@@ -146,23 +150,17 @@ const TeacherView: React.FC<TeacherViewProps> = ({
           </button>
         </div>
 
-        <div className="card" style={{ marginBottom: 24 }}>
-          <div>
-            <div className="form-row" style={{ marginBottom: 20 }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label htmlFor="question-input">Your Question</label>
-                <input
-                  id="question-input"
-                  type="text"
-                  placeholder="Type your question here..."
-                  value={questionText}
-                  onChange={(e) => onQuestionTextChange(e.target.value)}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label htmlFor="question-duration">Time Limit</label>
+        {/* ── CREATE TAB ── */}
+        {teacherTab === 'create' && (
+          <>
+            {/* Question input section */}
+            <div className="question-form">
+              {/* Row: label + duration select */}
+              <div className="question-form-header">
+                <span className="question-form-header-label">Enter your question</span>
                 <select
                   id="question-duration"
+                  className="duration-select"
                   value={durationSeconds}
                   onChange={(e) => onDurationChange(Number(e.target.value))}
                 >
@@ -172,37 +170,42 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                   <option value={90}>90 seconds</option>
                 </select>
               </div>
+
+              {/* Large textarea-style input */}
+              <input
+                id="question-input"
+                type="text"
+                className="question-textarea"
+                placeholder="Type your question here..."
+                value={questionText}
+                onChange={(e) => onQuestionTextChange(e.target.value)}
+              />
             </div>
 
-            <div className="form-group">
-              <label>Options</label>
+            {/* Options section */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              {/* Two-column header */}
+              <div className="options-header">
+                <span className="options-header-label">Edit Options</span>
+                <span className="options-header-label">Is it Correct?</span>
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {options.map((opt, index) => (
-                  <div
-                    key={opt.id}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'auto minmax(0, 1.5fr) minmax(0, 1fr)',
-                      gap: 12,
-                      alignItems: 'center'
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 28,
-                        textAlign: 'center',
-                        fontWeight: 600,
-                        color: 'var(--gray)'
-                      }}
-                    >
-                      {index + 1}.
-                    </div>
+                  <div key={opt.id} className="option-row">
+                    {/* Purple number badge */}
+                    <div className="option-index">{index + 1}</div>
+
+                    {/* Text input */}
                     <input
                       type="text"
+                      className="option-input"
                       placeholder={`Option ${index + 1}`}
                       value={opt.label}
                       onChange={(e) => onOptionLabelChange(opt.id, e.target.value)}
                     />
+
+                    {/* Yes / No radios */}
                     <div className="radio-group">
                       <label className="radio-label">
                         <input
@@ -211,7 +214,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                           checked={!!opt.isCorrect}
                           onChange={() => onSetCorrect(opt.id, true)}
                         />
-                        Correct
+                        Yes
                       </label>
                       <label className="radio-label">
                         <input
@@ -220,7 +223,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                           checked={!opt.isCorrect}
                           onChange={() => onSetCorrect(opt.id, false)}
                         />
-                        Incorrect
+                        No
                       </label>
                     </div>
                   </div>
@@ -230,30 +233,26 @@ const TeacherView: React.FC<TeacherViewProps> = ({
               <button
                 className="add-option"
                 type="button"
-                style={{ marginTop: 12 }}
                 onClick={onAddOption}
               >
-                + Add more options
+                + Add More option
               </button>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-            gap: 24,
-            alignItems: 'flex-start'
-          }}
-        >
-          <div>
-            {activePoll ? (
-              <div className="card">
-                <div className="card-title">Live Results</div>
+        {/* ── LIVE RESULTS TAB ── */}
+        {teacherTab === 'live' && (
+          <div style={{ marginTop: 16 }}>
+            {activePoll && (
+              <div className="card poll-results-card">
                 <div className="poll-question">{activePoll.question}</div>
+
                 {activePoll.options.map((opt, index) => {
-                  const pct = totalVotes ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                  const pct = totalVotes
+                    ? Math.round((opt.votes / totalVotes) * 100)
+                    : 0;
+
                   const dotClass =
                     index === 0
                       ? 'option-dot a'
@@ -262,6 +261,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                       : index === 2
                       ? 'option-dot c'
                       : 'option-dot d';
+
                   return (
                     <div key={opt.id} className="result-item">
                       <div className="result-header">
@@ -271,59 +271,52 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                         </div>
                         <div className="result-pct">{pct}%</div>
                       </div>
+
                       <div className="progress-bar">
-                        <div className="progress-fill" style={{ width: `${pct}%` }} />
+                        <div
+                          className="progress-fill"
+                          style={{ width: `${pct}%` }}
+                        />
                       </div>
                     </div>
                   );
                 })}
               </div>
-            ) : (
-              <div className="card">
-                <div className="card-title">Live Results</div>
-                <p className="page-subtitle">
-                  Ask a question to start collecting responses and see results here.
-                </p>
-              </div>
             )}
           </div>
+        )}
 
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-              alignItems: 'flex-end',
-              justifyContent: 'space-between',
-              minHeight: 0
+      {/* ── STICKY BOTTOM ACTION BAR ── */}
+      <div className="teacher-footer">
+        {teacherTab === 'create' ? (
+          <button
+            className="btn btn-primary btn-ask"
+            type="button"
+            onClick={() => {
+              onAskQuestion();
+              setTeacherTab('live');
             }}
+            disabled={!canAskNewQuestion}
           >
-            <button
-              className="btn btn-primary"
-              type="button"
-              style={{
-                width: '100%',
-                maxWidth: 220,
-                justifyContent: 'center'
-              }}
-              onClick={onAskQuestion}
-              disabled={!canAskNewQuestion}
-            >
-              Ask Question
-            </button>
-            <button
-              className="btn btn-outline btn-sm"
-              type="button"
-              style={{ marginTop: 'auto' }}
-              onClick={onAddQuestion}
-            >
-              + Add more questions
-            </button>
-          </div>
-        </div>
+            Ask Question
+          </button>
+        ) : (
+          <button
+            className="btn btn-primary btn-ask"
+            type="button"
+            onClick={() => {
+              if (!canAskNewQuestion) return;
+              onAddQuestion();
+              setTeacherTab('create');
+            }}
+            disabled={!canAskNewQuestion}
+          >
+            Ask Next Question
+          </button>
+        )}
       </div>
 
-      {/* Floating chat icon and panel */}
+      {/* ── Floating chat icon ── */}
       <button
         type="button"
         onClick={() => setIsChatOpen((open) => !open)}
@@ -348,6 +341,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
         💬
       </button>
 
+      {/* ── Chat panel ── */}
       {isChatOpen && (
         <div
           className="card"
@@ -392,14 +386,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
           </div>
 
           {activeChatTab === 'chat' ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                flex: 1
-              }}
-            >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Chat</div>
               <div
                 style={{
@@ -455,14 +442,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                flex: 1
-              }}
-            >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Participants</div>
               <div
                 style={{
@@ -513,7 +493,10 @@ const TeacherView: React.FC<TeacherViewProps> = ({
         </div>
       )}
 
-      {/* Poll history overlay */}
+      {/* Close main content container */}
+      </div>
+
+      {/* ── Poll history overlay ── */}
       {isHistoryOpen && (
         <div
           style={{
@@ -572,13 +555,10 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                     {poll.options.map((opt, optIndex) => {
                       const pct = Math.round((opt.votes / total) * 100);
                       const dotClass =
-                        optIndex === 0
-                          ? 'option-dot a'
-                          : optIndex === 1
-                          ? 'option-dot b'
-                          : optIndex === 2
-                          ? 'option-dot c'
-                          : 'option-dot d';
+                        optIndex === 0 ? 'option-dot a'
+                        : optIndex === 1 ? 'option-dot b'
+                        : optIndex === 2 ? 'option-dot c'
+                        : 'option-dot d';
                       return (
                         <div key={opt.label} className="result-item">
                           <div className="result-header">
@@ -608,4 +588,3 @@ const TeacherView: React.FC<TeacherViewProps> = ({
 };
 
 export default TeacherView;
-

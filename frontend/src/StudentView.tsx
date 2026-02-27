@@ -17,6 +17,7 @@ type StudentViewProps = {
     timestamp: string;
   }[];
   onSendChatMessage: (text: string) => void;
+  participants: { id: string; name?: string; role: 'teacher' | 'student' }[];
 };
 
 const StudentView: React.FC<StudentViewProps> = ({
@@ -28,7 +29,8 @@ const StudentView: React.FC<StudentViewProps> = ({
   onSubmitVote,
   isKicked,
   chatMessages,
-  onSendChatMessage
+  onSendChatMessage,
+  participants
 }) => {
   const [tempName, setTempName] = useState('');
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -380,11 +382,11 @@ const StudentView: React.FC<StudentViewProps> = ({
                   gap: 4
                 }}
               >
-                <div>You</div>
-                <div>Rahul Bajaj</div>
-                <div>Purbashree Bagchi</div>
-                <div>Raji Ghosh</div>
-                <div>Rakesh Sharma</div>
+                {participants.map((p) => (
+                  <div key={p.id}>
+                    {p.name ?? (p.role === 'teacher' ? 'Teacher' : p.id)}
+                  </div>
+                ))}
               </div>
             </div>
           )}

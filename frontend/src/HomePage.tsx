@@ -18,11 +18,11 @@ const HomePage: React.FC<HomePageProps> = ({
     <div className="welcome-screen">
       <div className="welcome-card">
         <h1 className="welcome-title">
-          Welcome to <strong>IntervuePoll</strong>
+          Welcome to the <strong>Live Polling System</strong>
         </h1>
         <p className="welcome-subtitle">
-          Choose how you want to join the live session. You can either manage polls as a
-          teacher or participate as a student.
+        Please select the role that best describes you to begin using the live polling
+        svstem
         </p>
 
         <div className="role-cards">

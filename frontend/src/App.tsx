@@ -232,77 +232,24 @@ const App: React.FC = () => {
     });
   }, [socket, persona, participantId, studentName]);
 
-  const renderNav = () => {
-    const personaLabel = persona === 'teacher' ? 'Teacher View' : 'Student View';
-    const badgeClass = persona === 'teacher' ? 'badge teacher' : 'badge student';
-    const avatarLetter =
-      persona === 'teacher'
-        ? 'T'
-        : persona === 'student' && studentName
-        ? studentName[0]?.toUpperCase()
-        : 'P';
-
-    return (
-      <nav>
-        <div className="nav-logo">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="4" />
-            <path d="M8 12h8M12 8v8" />
-          </svg>
-          Intervue<span>Poll</span>
-        </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {persona && <span className={badgeClass}>{personaLabel}</span>}
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'var(--primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '0.8rem',
-              fontWeight: 700
-            }}
-          >
-            {avatarLetter}
-          </div>
-        </div>
-      </nav>
-    );
-  };
-
   if (!persona) {
     return (
-      <>
-        {renderNav()}
-        <main>
-          <HomePage
-            selectedPersona={pendingPersona}
-            onSelectPersona={setPendingPersona}
-            onContinue={() => {
-              if (pendingPersona) {
-                setPersona(pendingPersona);
-              }
-            }}
-          />
-        </main>
-      </>
+      <main>
+        <HomePage
+          selectedPersona={pendingPersona}
+          onSelectPersona={setPendingPersona}
+          onContinue={() => {
+            if (pendingPersona) {
+              setPersona(pendingPersona);
+            }
+          }}
+        />
+      </main>
     );
   }
 
   return (
     <>
-      {renderNav()}
       {persona === 'teacher' ? (
         <TeacherView
           teacherTab={teacherTab}
@@ -347,6 +294,7 @@ const App: React.FC = () => {
             if (!socket || !text.trim()) return;
             socket.emit('chat:send', { text: text.trim() });
           }}
+          participants={participants}
           onSubmitVote={(optionId) => {
             if (!activePoll || !socket) return;
             socket.emit(
