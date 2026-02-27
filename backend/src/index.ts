@@ -6,7 +6,8 @@ import { env } from './config/env.js';
 import { connectDatabase } from './config/database.js';
 import { pollRouter } from './routes/pollRoutes.js';
 import { registerPollSocketHandlers } from './sockets/pollSocketHandler.js';
-
+import dns from "node:dns/promises";
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 async function main() {
   await connectDatabase();
 
