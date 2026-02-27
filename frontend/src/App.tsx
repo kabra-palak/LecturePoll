@@ -67,7 +67,7 @@ const App: React.FC = () => {
   }, [studentName]);
 
   useEffect(() => {
-    const s = io('http://localhost:4000/polls', {
+    const s = io('https://lecturepoll-1.onrender.com/polls', {
       transports: ['websocket']
     });
     setSocket(s);

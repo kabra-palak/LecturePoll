@@ -116,7 +116,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                 setIsHistoryOpen(true);
                 setIsHistoryLoading(true);
                 setHistoryError(null);
-                const res = await fetch('http://localhost:4000/api/polls/history');
+                const res = await fetch('https://lecturepoll-1.onrender.com/api/polls/history');
                 if (!res.ok) throw new Error('Failed to load history');
                 const data: {
                   id: string;
