@@ -20,6 +20,16 @@ type TeacherViewProps = {
   onAddOption: () => void;
   onAskQuestion: () => void;
   onAddQuestion: () => void;
+  participants: { id: string; name?: string; role: 'teacher' | 'student' }[];
+  onKickParticipant: (id: string) => void;
+  chatMessages: {
+    id: string;
+    text: string;
+    senderName: string;
+    role: 'teacher' | 'student';
+    timestamp: string;
+  }[];
+  onSendChatMessage: (text: string) => void;
 };
 
 const TeacherView: React.FC<TeacherViewProps> = ({
@@ -35,7 +45,11 @@ const TeacherView: React.FC<TeacherViewProps> = ({
   onSetCorrect,
   onAddOption,
   onAskQuestion,
-  onAddQuestion
+  onAddQuestion,
+  participants,
+  onKickParticipant,
+  chatMessages,
+  onSendChatMessage
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -44,6 +58,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
   const [historyItems, setHistoryItems] = useState<
     { id: string; question: string; options: { label: string; votes: number }[] }[]
   >([]);
+  const [activeChatTab, setActiveChatTab] = useState<'chat' | 'participants'>('chat');
 
   return (
     <main style={{ position: 'relative', minHeight: 'calc(100vh - 60px)' }}>
@@ -342,9 +357,8 @@ const TeacherView: React.FC<TeacherViewProps> = ({
             right: 24,
             width: 420,
             maxHeight: 360,
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-            gap: 12,
+            display: 'flex',
+            flexDirection: 'column',
             padding: 16,
             zIndex: 49
           }}
@@ -352,81 +366,150 @@ const TeacherView: React.FC<TeacherViewProps> = ({
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              gap: 8
+              marginBottom: 8,
+              gap: 4,
+              background: 'var(--light-gray)',
+              padding: 4,
+              borderRadius: 6
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Chat</div>
-            <div
-              style={{
-                flex: 1,
-                minHeight: 120,
-                maxHeight: 200,
-                overflowY: 'auto',
-                background: 'var(--light-gray)',
-                borderRadius: 8,
-                padding: 8,
-                fontSize: '0.8rem'
-              }}
+            <button
+              type="button"
+              className={`tab ${activeChatTab === 'chat' ? 'active' : ''}`}
+              style={{ flex: 1 }}
+              onClick={() => setActiveChatTab('chat')}
             >
-              <div style={{ marginBottom: 6 }}>
-                <strong>Riya:</strong> I think the answer is Mars.
-              </div>
-              <div style={{ marginBottom: 6 }}>
-                <strong>Arjun:</strong> Same here!
-              </div>
-              <div>
-                <strong>Teacher:</strong> Last 10 seconds, submit your answers now.
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
-                type="text"
-                placeholder="Type a message..."
-                style={{
-                  flex: 1,
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  fontSize: '0.8rem'
-                }}
-              />
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                style={{ padding: '6px 10px' }}
-              >
-                Send
-              </button>
-            </div>
+              Chat
+            </button>
+            <button
+              type="button"
+              className={`tab ${activeChatTab === 'participants' ? 'active' : ''}`}
+              style={{ flex: 1 }}
+              onClick={() => setActiveChatTab('participants')}
+            >
+              Participants
+            </button>
           </div>
 
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 8 }}>
-              Participants
-            </div>
+          {activeChatTab === 'chat' ? (
             <div
               style={{
-                maxHeight: 260,
-                overflowY: 'auto',
-                background: 'var(--light-gray)',
-                borderRadius: 8,
-                padding: 8,
-                fontSize: '0.8rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 4
+                gap: 8,
+                flex: 1
               }}
             >
-              <div>Rahul Bajaj</div>
-              <div>Purbashree Bagchi</div>
-              <div>Raji Ghosh</div>
-              <div>Rakesh Sharma</div>
-              <div>Aarav Mehta</div>
-              <div>Ananya Singh</div>
-              <div>Vikram Joshi</div>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Chat</div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 120,
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                  background: 'var(--light-gray)',
+                  borderRadius: 8,
+                  padding: 8,
+                  fontSize: '0.8rem'
+                }}
+              >
+                {chatMessages.map((m) => (
+                  <div key={m.id} style={{ marginBottom: 6 }}>
+                    <strong>{m.senderName}:</strong> {m.text}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  placeholder="Type a message..."
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    fontSize: '0.8rem'
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onSendChatMessage((e.target as HTMLInputElement).value);
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  style={{ padding: '6px 10px' }}
+                  onClick={() => {
+                    const input = document.querySelector(
+                      'input[placeholder="Type a message..."]'
+                    ) as HTMLInputElement | null;
+                    if (!input) return;
+                    onSendChatMessage(input.value);
+                    input.value = '';
+                  }}
+                >
+                  Send
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                flex: 1
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Participants</div>
+              <div
+                style={{
+                  maxHeight: 260,
+                  overflowY: 'auto',
+                  background: 'var(--light-gray)',
+                  borderRadius: 8,
+                  padding: 8,
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6
+                }}
+              >
+                {participants
+                  .filter((p) => p.role === 'student')
+                  .map((p) => (
+                    <div
+                      key={p.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        background: 'var(--white)',
+                        borderRadius: 8,
+                        padding: '6px 8px'
+                      }}
+                    >
+                      <span>{p.name ?? p.id}</span>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        style={{
+                          background: '#ff4d4f',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '4px 10px'
+                        }}
+                        onClick={() => onKickParticipant(p.id)}
+                      >
+                        Kick out
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

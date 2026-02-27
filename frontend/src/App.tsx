@@ -32,6 +32,13 @@ const App: React.FC = () => {
   ]);
   const [durationSeconds, setDurationSeconds] = useState<number>(60);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [participants, setParticipants] = useState<
+    { id: string; name?: string; role: 'teacher' | 'student' }[]
+  >([]);
+  const [isKicked, setIsKicked] = useState(false);
+  const [chatMessages, setChatMessages] = useState<
+    { id: string; text: string; senderName: string; role: 'teacher' | 'student'; timestamp: string }[]
+  >([]);
   const [participantId] = useState<string>(() => {
     if (typeof window === 'undefined') return `p-${Date.now()}`;
     const key = 'lecturepoll_participant_id';
@@ -90,6 +97,42 @@ const App: React.FC = () => {
       setOptions(mapped.options);
       setDurationSeconds(serverPoll.durationSeconds);
     });
+
+    s.on(
+      'participants:update',
+      (
+        list: {
+          id: string;
+          name?: string;
+          role: 'teacher' | 'student';
+        }[]
+      ) => {
+        setParticipants(list);
+      }
+    );
+
+    s.on(
+      'student:kicked',
+      (payload: { participantId: string }) => {
+        if (payload.participantId === participantId) {
+          setIsKicked(true);
+        }
+      }
+    );
+
+    s.on(
+      'chat:message',
+      (msg: {
+        id: string;
+        text: string;
+        senderId: string;
+        senderName: string;
+        role: 'teacher' | 'student';
+        timestamp: string;
+      }) => {
+        setChatMessages((prev) => [...prev.slice(-49), msg]);
+      }
+    );
 
     return () => {
       s.disconnect();
@@ -176,6 +219,18 @@ const App: React.FC = () => {
       handleTimerComplete();
     }
   }, [remainingSeconds, activePoll]);
+
+  useEffect(() => {
+    if (!socket) return;
+    if (!persona) return;
+
+    const role = persona;
+    socket.emit('participant:join', {
+      participantId,
+      name: role === 'student' ? studentName ?? undefined : 'Teacher',
+      role
+    });
+  }, [socket, persona, participantId, studentName]);
 
   const renderNav = () => {
     const personaLabel = persona === 'teacher' ? 'Teacher View' : 'Student View';
@@ -268,6 +323,16 @@ const App: React.FC = () => {
           onAddOption={handleAddOption}
           onAskQuestion={handleAskQuestion}
           onAddQuestion={handleAddQuestionEditor}
+          participants={participants}
+          onKickParticipant={(id) => {
+            if (!socket) return;
+            socket.emit('teacher:kick', { participantId: id });
+          }}
+          chatMessages={chatMessages}
+          onSendChatMessage={(text) => {
+            if (!socket || !text.trim()) return;
+            socket.emit('chat:send', { text: text.trim() });
+          }}
         />
       ) : (
         <StudentView
@@ -276,6 +341,12 @@ const App: React.FC = () => {
           activePoll={activePoll}
           remainingSeconds={remainingSeconds}
           totalVotes={totalVotes}
+          isKicked={isKicked}
+          chatMessages={chatMessages}
+          onSendChatMessage={(text) => {
+            if (!socket || !text.trim()) return;
+            socket.emit('chat:send', { text: text.trim() });
+          }}
           onSubmitVote={(optionId) => {
             if (!activePoll || !socket) return;
             socket.emit(

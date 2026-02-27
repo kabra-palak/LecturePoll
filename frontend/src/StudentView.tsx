@@ -8,6 +8,15 @@ type StudentViewProps = {
   remainingSeconds: number;
   totalVotes: number;
   onSubmitVote: (optionId: string) => void;
+  isKicked: boolean;
+  chatMessages: {
+    id: string;
+    text: string;
+    senderName: string;
+    role: 'teacher' | 'student';
+    timestamp: string;
+  }[];
+  onSendChatMessage: (text: string) => void;
 };
 
 const StudentView: React.FC<StudentViewProps> = ({
@@ -16,12 +25,16 @@ const StudentView: React.FC<StudentViewProps> = ({
   activePoll,
   remainingSeconds,
   totalVotes,
-  onSubmitVote
+  onSubmitVote,
+  isKicked,
+  chatMessages,
+  onSendChatMessage
 }) => {
   const [tempName, setTempName] = useState('');
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeChatTab, setActiveChatTab] = useState<'chat' | 'participants'>('chat');
 
   // Reset selection/submission when a new poll starts
   useEffect(() => {
@@ -71,6 +84,20 @@ const StudentView: React.FC<StudentViewProps> = ({
           >
             Join Session
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isKicked) {
+    return (
+      <div className="welcome-screen">
+        <div className="welcome-card">
+          <h1 className="welcome-title">You&apos;ve been removed</h1>
+          <p className="welcome-subtitle">
+            The teacher has removed you from this session. Please contact your instructor if
+            you believe this was a mistake.
+          </p>
         </div>
       </div>
     );
@@ -233,9 +260,8 @@ const StudentView: React.FC<StudentViewProps> = ({
             right: 24,
             width: 380,
             maxHeight: 340,
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-            gap: 12,
+            display: 'flex',
+            flexDirection: 'column',
             padding: 16,
             zIndex: 49
           }}
@@ -243,76 +269,125 @@ const StudentView: React.FC<StudentViewProps> = ({
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              gap: 8
+              marginBottom: 8,
+              gap: 4,
+              background: 'var(--light-gray)',
+              padding: 4,
+              borderRadius: 6
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Chat</div>
-            <div
-              style={{
-                flex: 1,
-                minHeight: 120,
-                maxHeight: 200,
-                overflowY: 'auto',
-                background: 'var(--light-gray)',
-                borderRadius: 8,
-                padding: 8,
-                fontSize: '0.8rem'
-              }}
+            <button
+              type="button"
+              className={`tab ${activeChatTab === 'chat' ? 'active' : ''}`}
+              style={{ flex: 1 }}
+              onClick={() => setActiveChatTab('chat')}
             >
-              <div style={{ marginBottom: 6 }}>
-                <strong>You:</strong> This is where you can chat with the class.
-              </div>
-              <div>
-                <strong>Teacher:</strong> Stay focused on the current question.
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
-                type="text"
-                placeholder="Type a message..."
-                style={{
-                  flex: 1,
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  fontSize: '0.8rem'
-                }}
-              />
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                style={{ padding: '6px 10px' }}
-              >
-                Send
-              </button>
-            </div>
+              Chat
+            </button>
+            <button
+              type="button"
+              className={`tab ${activeChatTab === 'participants' ? 'active' : ''}`}
+              style={{ flex: 1 }}
+              onClick={() => setActiveChatTab('participants')}
+            >
+              Participants
+            </button>
           </div>
 
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 8 }}>
-              Participants
-            </div>
+          {activeChatTab === 'chat' ? (
             <div
               style={{
-                maxHeight: 260,
-                overflowY: 'auto',
-                background: 'var(--light-gray)',
-                borderRadius: 8,
-                padding: 8,
-                fontSize: '0.8rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 4
+                gap: 8,
+                flex: 1
               }}
             >
-              <div>You</div>
-              <div>Rahul Bajaj</div>
-              <div>Purbashree Bagchi</div>
-              <div>Raji Ghosh</div>
-              <div>Rakesh Sharma</div>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Chat</div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 120,
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                  background: 'var(--light-gray)',
+                  borderRadius: 8,
+                  padding: 8,
+                  fontSize: '0.8rem'
+                }}
+              >
+                {chatMessages.map((m) => (
+                  <div key={m.id} style={{ marginBottom: 6 }}>
+                    <strong>{m.senderName}:</strong> {m.text}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  placeholder="Type a message..."
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    fontSize: '0.8rem'
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onSendChatMessage((e.target as HTMLInputElement).value);
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  style={{ padding: '6px 10px' }}
+                  onClick={() => {
+                    const input = document.querySelector(
+                      'input[placeholder="Type a message..."]'
+                    ) as HTMLInputElement | null;
+                    if (!input) return;
+                    onSendChatMessage(input.value);
+                    input.value = '';
+                  }}
+                >
+                  Send
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                flex: 1
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Participants</div>
+              <div
+                style={{
+                  maxHeight: 260,
+                  overflowY: 'auto',
+                  background: 'var(--light-gray)',
+                  borderRadius: 8,
+                  padding: 8,
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4
+                }}
+              >
+                <div>You</div>
+                <div>Rahul Bajaj</div>
+                <div>Purbashree Bagchi</div>
+                <div>Raji Ghosh</div>
+                <div>Rakesh Sharma</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>
