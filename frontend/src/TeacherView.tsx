@@ -80,8 +80,16 @@ const TeacherView: React.FC<TeacherViewProps> = ({
             <div className="teacher-header-badge">✦ Intervue Poll</div>
 
             <h1 className="page-title" style={{ marginBottom: 6 }}>
-              {teacherTab === 'create' ? "Let's Get Started" : ''}
+            {teacherTab === 'create' && (
+  <>
+    Let's <strong>Get Started</strong>
+  </>
+)}
             </h1>
+            <p className="page-subtitle" style={{ maxWidth: 640 }}>
+              you&apos;ll have the ability to create and manage polls, ask questions and
+              monitor your students reponses in real-time.
+            </p>
           </div>
 
           {/* View Poll History button */}
@@ -90,16 +98,16 @@ const TeacherView: React.FC<TeacherViewProps> = ({
             title="View poll history"
             style={{
               borderRadius: '999px',
-              border: '1px solid var(--border)',
-              background: 'var(--white)',
-              padding: '6px 12px',
+              border: 'none',
+              background: 'var(--primary)',
+              padding: '6px 14px',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 8,
               fontSize: '0.8rem',
-              color: 'var(--gray)',
+              color: '#fff',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              boxShadow: '0 4px 14px rgba(119, 101, 218, 0.35)',
               flexShrink: 0,
               marginTop: 4
             }}
@@ -137,14 +145,25 @@ const TeacherView: React.FC<TeacherViewProps> = ({
                 width: 18,
                 height: 18,
                 borderRadius: '50%',
-                background: 'var(--primary-bg)',
+                background: 'var(--primary-dark)',
                 display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.7rem'
+                justifyContent: 'center'
               }}
             >
-              📜
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 11a4 4 0 110-8 4 4 0 010 8z"
+                  fill="#ffffff"
+                />
+                <circle cx="12" cy="12" r="2" fill="#ffffff" />
+              </svg>
             </span>
             <span>View Poll History</span>
           </button>
@@ -183,7 +202,7 @@ const TeacherView: React.FC<TeacherViewProps> = ({
             </div>
 
             {/* Options section */}
-            <div className="form-group" style={{ marginBottom: 0 }}>
+            <div className="form-group" style={{ marginTop: 24, marginBottom: 0 }}>
               {/* Two-column header */}
               <div className="options-header">
                 <span className="options-header-label">Edit Options</span>
